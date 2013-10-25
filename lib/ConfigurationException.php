@@ -5,7 +5,7 @@ extends \Exception
 {
 	public function __construct(Definition $property, $details = null)
 	{
-		$message = $property->getPropertyIdentifier() . ' is not configured correctly';
+		$message = $property->getPropertyIdentifier() . ' is not "proper"-ly configured';
 		
 		if ($details !== null)
 		{

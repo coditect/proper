@@ -5,7 +5,7 @@ extends AbstractConstraint
 {
 	public function test()
 	{
-		if (($numMatches = preg_match($this->parameters[0], $value)) === false)
+		if (($numMatches = preg_match($this->parameters[0], $this->value)) === false)
 		{
 			$message = var_export($this->parameters[0], true) . ' is not a valid regular expression';
 			throw new \Proper\ConfigurationException($this->property, $message);

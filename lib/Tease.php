@@ -16,7 +16,7 @@ trait Tease
 		}
 		else
 		{
-			throw new Exception\Access\NotReadable($def);
+			throw new NotReadableException($def);
 		}
 	}
 	
@@ -31,7 +31,7 @@ trait Tease
 		}
 		else
 		{
-			throw new Exception\Access\NotWritable($def);
+			throw new NotWritableException($def);
 		}
 	}
 	
@@ -40,7 +40,7 @@ trait Tease
 	{
 		if (!isset(static::$propertyDefinitions[$name]))
 		{
-			static::$propertyDefinitions[$name] = new Definition(__CLASS__, $name);
+			static::$propertyDefinitions[$name] = new Definition($name, __CLASS__);
 		}
 		
 		return static::$propertyDefinitions[$name];
