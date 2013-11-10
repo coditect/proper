@@ -41,7 +41,8 @@ class Definition
 	/**
 		The tag that introduces a property definition in a doc comment.
 	**/
-	const TAG = '@proper';
+	const ACCESS_TAG = '@access';
+	const FILTER_TAG = '@filter';
 	
 	
 	/**
@@ -69,21 +70,9 @@ class Definition
 	
 	
 	/**
-		The list of constraints on the property's value.
-	**/
-	protected $constraints = array();
-	
-	
-	/**
-		The list of filters that should be applied before a new value is assigned to the property.
+		The list of filters on the property's value.
 	**/
 	protected $filters = array();
-	
-	
-	/**
-		The constraint that failed on the most recent call to Definition::check().
-	**/
-	protected $constraintFailed;
 	
 	
 	
@@ -104,8 +93,14 @@ class Definition
 		{
 			$reflection = new \ReflectionClass($class);
 			$property = $reflection->getProperty($name);
+			$comment = $property->getDocComment();
 			$this->class = $property->class;
-			$this->parseDefinition($property->getDocComment());
+			$this->parseAccess($comment);
+			
+			if ($this->writable)
+			{
+				$this->parseFilters($comment);
+			}
 		}
 		else
 		{
@@ -114,117 +109,86 @@ class Definition
 	}
 	
 	
-	/**
-		Extracts and parses the definition data contained in the given comment text.
-		
-		@param   string $comment         The text of the DocBlock-style comment that precedes the property's declaration in the source code.
-		@throws  ConfigurationException  When the property definition block contains syntax errors or is otherwise not properly formatted.
-	**/
-	protected function parseDefinition($comment)
+	protected function parseAccess($comment)
 	{
-		$pattern = '/' . preg_quote(self::PREFIX, '/') . '\s+(\\{.*?\\});/s';
+		$pattern = '/^[\s\*]*' . preg_quote(self::ACCESS_TAG, '/') . '\s+(.*)$/m';
 		preg_match($pattern, $comment, $matches);
 		
 		if (isset($matches[1]))
 		{
-			if ($definition = json_decode($matches[1], true))
-			{
-				if (isset($definition['readable']))
-				{
-					$this->readable = (bool) $definition['readable'];
-				}
-				
-				if (isset($definition['writable']))
-				{
-					$this->writable = (bool) $definition['writable'];
-				}
-				
-				if (isset($definition['constraints']))
-				{
-					$this->parseConstraints($definition['constraints']);
-				}
-				
-				if (isset($definition['filters']))
-				{
-					$this->parseFilters($definition['filters']);
-				}
-			}
-			else
-			{
-				$jsonErrors = array(
-					JSON_ERROR_DEPTH => 'The JSON property definition exceeds the maximum stack depth',
-					JSON_ERROR_STATE_MISMATCH => 'The JSON property definition is invalid or malformed',
-					JSON_ERROR_CTRL_CHAR => 'The JSON property definition contains an incorrectly encoded control character',
-					JSON_ERROR_SYNTAX => 'The JSON property definition contains a syntax error',
-					JSON_ERROR_UTF8 => 'The JSON property definition contains malformed UTF-8 characters'
-				);
-				
-				$errorCode = json_last_error();
-				$errorMessage = isset($jsonErrors[$errorCode]) ? $jsonErrors[$errorCode] : null;
-				throw new ConfigurationException($this, $errorMessage);
-			}
+			$access = strtolower($matches[1]);
+			$this->readable = (strpos($access, 'read') !== false);
+			$this->writable = (strpos($access, 'write') !== false);
 		}
 	}
 	
 	
-	protected function parseConstraints(array $definitions)
+	protected function parseFilters($comment)
 	{
-		foreach ($definitions as $class => $parameters)
+		$property = $this->getPropertyIdentifier();
+		$pattern = '/^[\s\*]*' . preg_quote(self::FILTER_TAG, '/') . '\s+(\S+)\s+(.*)$/m';
+		preg_match_all($pattern, $comment, $matches, PREG_SET_ORDER);
+		
+		foreach ($matches as $match)
 		{
-			if ($class[0] !== '\\')
-			{
-				$class = '\\Proper\\Constraint\\' . ucfirst($class) . 'Constraint';
-			}
-			
-			if (class_exists($class, true))
-			{
-				if ($class instanceof Constraint)
-				{
-					$reflection = new \ReflectionClass($class);
-					$constraint = $reflection->newInstance($this);
-					$constraint->setParameters((array) $parameters);
-					$this->constraints[] = $constraint;
-				}
-				else
-				{
-					throw new ConfigurationException($this, "$class is not an instance of \\Proper\\Constraint");
-				}
-			}
-			else
-			{
-				throw new ConfigurationException($this, "$class is not defined");
-			}
+			$class = $this->parseFilterClass($match[1]);
+			$options = $this->parseFilterOptions($match[2]);
+			$this->filters[] = new $class($this, $options);
 		}
 	}
 	
 	
-	protected function parseFilters(array $definitions)
+	protected function parseFilterClass($class)
 	{
-		foreach ($definitions as $class => $parameters)
+		if ($class[0] !== '\\')
 		{
-			if ($class[0] !== '\\')
-			{
-				$class = '\\Proper\\Filter\\' . ucfirst($class);
-			}
+			$class = '\\Proper\\Filter\\' . ucfirst($class);
+		}
+		
+		if (class_exists($class, true))
+		{
+			$reflection = new \ReflectionClass($class);
 			
-			if (class_exists($class, true))
+			if ($reflection->implementsInterface('\\Proper\\Filter'))
 			{
-				if ($class instanceof Filter)
-				{
-					$reflection = new \ReflectionClass($class);
-					$this->filters[] = $reflection->newInstanceArgs((array) $parameters);
-				}
-				else
-				{
-					throw new ConfigurationException($this, "$class is not an instance of \\Proper\\Filter");
-				}
+				return $class;
 			}
 			else
 			{
-				throw new ConfigurationException($this, "$class is not defined");
+				throw new ConfigurationException($this, "$class is not an instance of \\Proper\\Filter");
 			}
 		}
+		else
+		{
+			throw new ConfigurationException($this, "$class is not defined");
+		}
 	}
+	
+	
+	protected function parseFilterOptions($json)
+	{
+		if ($options = json_decode($json))
+		{
+			return $options;
+		}
+		else
+		{
+			$jsonErrors = array(
+				JSON_ERROR_DEPTH => 'The JSON property definition exceeds the maximum stack depth',
+				JSON_ERROR_STATE_MISMATCH => 'The JSON property definition is invalid or malformed',
+				JSON_ERROR_CTRL_CHAR => 'The JSON property definition contains an incorrectly encoded control character',
+				JSON_ERROR_SYNTAX => 'The JSON property definition contains a syntax error',
+				JSON_ERROR_UTF8 => 'The JSON property definition contains malformed UTF-8 characters'
+			);
+			
+			$errorCode = json_last_error();
+			$errorMessage = isset($jsonErrors[$errorCode]) ? $jsonErrors[$errorCode] : null;
+			throw new ConfigurationException($this, $errorMessage);
+		}
+	}
+	
+	
+	
 	
 	
 	/**
@@ -235,43 +199,11 @@ class Definition
 		@return  boolean              True when the provided value satisfies all constraints
 		@throws  ConstraintViolation  When the provided value does not satisfy a constraint.
 	**/
-	public function check($value, $throw = true)
-	{
-		foreach ($this->constraints as $constraint)
-		{
-			$constraint->setValue($value);
-			
-			if (!$constraint->test())
-			{
-				$this->constraintFailed = $constraint;
-				
-				if ($throw)
-				{
-					throw new ConstraintViolation($this, $constraint);
-				}
-				else
-				{
-					return false;
-				}
-			}
-		}
-		
-		$this->constraintFailed = null;
-		return true;
-	}
-	
-	
-	/**
-		Filters the given value with the defined filters.
-		
-		@param   mixed $value  The value to filter.
-		@return  mixed         The filtered value.
-	**/
-	public function filter($value)
+	public function check($value)
 	{
 		foreach ($this->filters as $filter)
 		{
-			$value = $filter->filter($value);
+			$value = $filter->applyTo($value);
 		}
 		
 		return $value;

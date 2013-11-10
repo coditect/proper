@@ -2,5 +2,8 @@
 
 interface Filter
 {
-	public function filter($value);
+	public function __construct(Definition $property, $options);
+	public function isValid($value);
+	public function transform($value);
+	public function applyTo($value);
 }

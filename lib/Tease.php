@@ -6,9 +6,32 @@ trait Tease
 	protected static $propertyDefinitions = array();
 	
 	
-	public function __get($name)
+	public function __call($name, $arguments)
 	{
-		$def = $this->getPropertyDefinition($name);
+		$prefix = substr($name, 0, 3);
+		$name = lcfirst(substr($name, 3));
+		
+		if ($prefix === 'get')
+		{
+			return $this->proper__get($name);
+		}
+		else if ($prefix === 'set')
+		{
+			return $this->proper__set($name, $arguments[0]);
+		}
+		else
+		{
+			trigger_error('Call to undefined method ' . __CLASS__ . "::$name()", E_USER_ERROR);
+		}
+	}
+	
+	
+	
+	
+	
+	protected function proper__get($name)
+	{
+		$def = $this->proper__definition($name);
 		
 		if ($def->readable)
 		{
@@ -21,13 +44,14 @@ trait Tease
 	}
 	
 	
-	public function __set($name, $value)
+	public function proper__set($name, $value)
 	{
-		$def = $this->getPropertyDefinition($name);
+		$def = $this->proper__definition($name);
 		
-		if ($def->writable && $def->check($value))
+		if ($def->writable)
 		{
-			$this->$name = $def->filter($value);
+			$this->$name = $def->check($value);
+			return $this->$name;
 		}
 		else
 		{
@@ -36,7 +60,7 @@ trait Tease
 	}
 	
 	
-	protected function getPropertyDefinition($name)
+	protected function proper__definition($name)
 	{
 		if (!isset(static::$propertyDefinitions[$name]))
 		{
