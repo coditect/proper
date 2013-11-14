@@ -24,7 +24,7 @@ extends AbstractFilter
 	}
 	
 	
-	public function getErrorMessage($value)
+	public function getError($value)
 	{
 		$property = $this->property->getPropertyIdentifier();
 		$pattern = var_export($this->pattern, true);

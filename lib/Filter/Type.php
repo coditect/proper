@@ -36,33 +36,38 @@ extends AbstractFilter
 	
 	public function isValid($value)
 	{
-		foreach ($this->allowedTypes as $type)
+		if (!empty($this->allowedTypes))
 		{
-			$function = 'is_' . strtolower($type);
-			
-			if (!function_exists($function))
+			foreach ($this->allowedTypes as $type)
 			{
-				if ($function === 'is_str')
+				$function = 'is_' . strtolower($type);
+			
+				if (!function_exists($function))
 				{
-					$function = 'is_string';
+					if ($function === 'is_str')
+					{
+						$function = 'is_string';
+					}
+					else if ($function === 'is_boolean')
+					{
+						$function = 'is_bool';
+					}
+					else
+					{
+						throw new \Proper\ConfigurationException($this->property, $type . ' is not a valid type');
+					}
 				}
-				else if ($function === 'is_boolean')
+			
+				if ($function($value))
 				{
-					$function = 'is_bool';
-				}
-				else
-				{
-					throw new \Proper\ConfigurationException($this->property, $type . ' is not a valid type');
+					return true;
 				}
 			}
-			
-			if ($function($value))
-			{
-				return true;
-			}
+		
+			return false;
 		}
 		
-		return false;
+		return true;
 	}
 	
 	
@@ -93,6 +98,10 @@ extends AbstractFilter
 				default:
 					throw new \Proper\ConfigurationException($this->property, "Cannot cast to type {$this->typeToForce}");
 			}
+		}
+		else
+		{
+			return $value;
 		}
 	}
 	
