@@ -39,13 +39,6 @@
 class Definition
 {
 	/**
-		The tag that introduces a property definition in a doc comment.
-	**/
-	const ACCESS_TAG = '@access';
-	const FILTER_TAG = '@filter';
-	
-	
-	/**
 		The name of the propery.
 	**/
 	protected $name;
@@ -84,23 +77,20 @@ class Definition
 		@param   string $class      The name of the class the propery belongs to.
 		@throws  NotFoundException  When no property with the given name is defined in the given class.
 	**/
-	public function __construct($name, $class)
+	public function __construct($propertyName, $className)
 	{
-		$this->name = $name;
-		$this->class = $class;
-		
-		if (property_exists($class, $name))
+		$this->name = $propertyName;
+		$this->class = $className;
+	}
+	
+	
+	
+	public function getDocComment()
+	{
+		if (property_exists($this->class, $this->name))
 		{
-			$reflection = new \ReflectionClass($class);
-			$property = $reflection->getProperty($name);
-			$comment = $property->getDocComment();
-			$this->class = $property->class;
-			$this->parseAccess($comment);
-			
-			if ($this->writable)
-			{
-				$this->parseFilters($comment);
-			}
+			$reflection = new \ReflectionProperty($this->class, $this->name);
+			return $reflection->getDocComment();
 		}
 		else
 		{
@@ -109,83 +99,34 @@ class Definition
 	}
 	
 	
-	protected function parseAccess($comment)
+	public function getDefinitionParser()
 	{
-		$pattern = '/^[\s\*]*' . preg_quote(self::ACCESS_TAG, '/') . '\s+(.*)$/m';
-		preg_match($pattern, $comment, $matches);
-		
-		if (isset($matches[1]))
-		{
-			$access = strtolower($matches[1]);
-			$this->readable = (strpos($access, 'read') !== false);
-			$this->writable = (strpos($access, 'write') !== false);
-		}
+		return new Parser\Standard($this);
 	}
 	
 	
-	protected function parseFilters($comment)
+	public function parseDefinition($definition, Parser $parser)
 	{
-		$property = $this->getPropertyIdentifier();
-		$pattern = '/^[\s\*]*' . preg_quote(self::FILTER_TAG, '/') . '\s+(\S+)\s+(.*)$/m';
-		preg_match_all($pattern, $comment, $matches, PREG_SET_ORDER);
+		$access = $parser->parseAccess($definition);
+		$this->readable = $access->readable;
+		$this->writable = $access->writable;
 		
-		foreach ($matches as $match)
+		foreach ($parser->parseFilters($definition) as $class => $options)
 		{
-			$class = $this->parseFilterClass($match[1]);
-			$options = $this->parseFilterOptions($match[2]);
 			$this->filters[] = new $class($this, $options);
 		}
 	}
 	
 	
-	protected function parseFilterClass($class)
+	public function parseDefinitionFromDocComment()
 	{
-		if ($class[0] !== '\\')
-		{
-			$class = '\\Proper\\Filter\\' . ucfirst($class);
-		}
-		
-		if (class_exists($class, true))
-		{
-			$reflection = new \ReflectionClass($class);
-			
-			if ($reflection->implementsInterface('\\Proper\\Filter'))
-			{
-				return $class;
-			}
-			else
-			{
-				throw new ConfigurationException($this, "$class is not an instance of \\Proper\\Filter");
-			}
-		}
-		else
-		{
-			throw new ConfigurationException($this, "$class is not defined");
-		}
+		$comment = $this->getDocComment();
+		$parser = $this->getDefinitionParser();
+		$this->parseDefinition($comment, $parser);
 	}
 	
 	
-	protected function parseFilterOptions($json)
-	{
-		if ($options = json_decode($json))
-		{
-			return $options;
-		}
-		else
-		{
-			$jsonErrors = array(
-				JSON_ERROR_DEPTH => 'The JSON property definition exceeds the maximum stack depth',
-				JSON_ERROR_STATE_MISMATCH => 'The JSON property definition is invalid or malformed',
-				JSON_ERROR_CTRL_CHAR => 'The JSON property definition contains an incorrectly encoded control character',
-				JSON_ERROR_SYNTAX => 'The JSON property definition contains a syntax error',
-				JSON_ERROR_UTF8 => 'The JSON property definition contains malformed UTF-8 characters'
-			);
-			
-			$errorCode = json_last_error();
-			$errorMessage = isset($jsonErrors[$errorCode]) ? $jsonErrors[$errorCode] : null;
-			throw new ConfigurationException($this, $errorMessage);
-		}
-	}
+
 	
 	
 	

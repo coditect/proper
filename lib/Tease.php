@@ -64,7 +64,9 @@ trait Tease
 	{
 		if (!isset(static::$propertyDefinitions[$name]))
 		{
-			static::$propertyDefinitions[$name] = new Definition($name, __CLASS__);
+			$def = new Definition($name, __CLASS__);
+			$def->parseDefinitionFromDocComment();
+			static::$propertyDefinitions[$name] = $def;
 		}
 		
 		return static::$propertyDefinitions[$name];
