@@ -69,3 +69,10 @@ demo('Kappa has a range filter that only accepts numbers greater than 0 and less
 	'$demo->setKappa(1.0)',
 	'$demo->setKappa(1.5)'
 ));
+
+demo('Lambda has a length filter that only accepts strings with a length between 5 and 7 characters:', array(
+	'$demo->setLambda("larch")',
+	'$demo->setLambda("lime")',
+	'$demo->setLambda("leadwood")',
+	'$demo->setLambda("locust")'
+));

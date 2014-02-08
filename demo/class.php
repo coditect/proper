@@ -86,8 +86,17 @@ class Demo
 	**/
 	protected $kappa;
 	
-	
+	/**
+		Lambda only accepts numbers in the range (0, 1].
+		
+		@readable and @writable
+		@filter Type {"allow": "string"}
+		@filter Length {"min": 5, "max": 7}
+	**/
 	protected $lambda;
+	
+	
+	
 	protected $mu;
 	protected $nu;
 	protected $xi;
