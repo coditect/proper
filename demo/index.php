@@ -62,3 +62,10 @@ demo('Iota has an instance filter that only accepts DateTime objects:', array(
 	'$demo->setIota(new DateTime())',
 	'$demo->setIota(time())'
 ));
+
+demo('Kappa has a range filter that only accepts numbers greater than 0 and less than or equal to 1:', array(
+	'$demo->setKappa(0.0)',
+	'$demo->setKappa(0.5)',
+	'$demo->setKappa(1.0)',
+	'$demo->setKappa(1.5)'
+));

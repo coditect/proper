@@ -69,7 +69,7 @@ class Demo
 	protected $theta;
 	
 	/**
-		Iota only DateTime objects.
+		Iota only accepts DateTime objects.
 		
 		@readable and @writable
 		@filter Instance {"class": "DateTime"}
@@ -77,7 +77,16 @@ class Demo
 	protected $iota;
 	
 	
+	/**
+		Kappa only accepts numbers in the range (0, 1].
+		
+		@readable and @writable
+		@filter Type {"allow": "numeric", "force": "float"}
+		@filter Range {">": 0, "<=": 1}
+	**/
 	protected $kappa;
+	
+	
 	protected $lambda;
 	protected $mu;
 	protected $nu;
