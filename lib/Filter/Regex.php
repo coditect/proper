@@ -31,5 +31,7 @@ implements Filter
 			$value = var_export($value, true);
 			throw new Exception("$value does not match the regular expression $pattern");
 		}
+		
+		return $value;
 	}
 }

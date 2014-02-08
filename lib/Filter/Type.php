@@ -126,7 +126,7 @@ implements Filter
 	
 	protected function castToFloat($value)
 	{
-		return intval($value);
+		return floatval($value);
 	}
 	
 	
