@@ -5,7 +5,43 @@ use \ReflectionClass;
 use \Proper\Loader;
 
 
-class JSONAnnotationLoader
+/**
+	JSONAnnotationLoader uses the {@link http://www.php.net/manual/en/book.reflection.php Reflection API} to extract a textual definition of the property's accessibility and filters from its doc comment.
+	
+	
+	Accesiblity
+	===========
+	
+	Properties are designated as publicly readable and writable by including the `@readable` and `@writable` tags, respectively.  A property whose doc comment contains neither of these tags is not publicly accessible.
+	
+	
+	Filters
+	=======
+	
+	Filter definitions consist of the `@filter` tag followed by the name of a class that implements the {@link Proper\Filter} interface and a JSON-formatted set of parameters.  Filter definitions must occupy their own line and may not wrap.  When referencing one of Proper's built-in filters, the namespace can be omitted; otherwise, the class name must be fully qualified.
+	
+	
+	Examples
+	========
+	
+	Indicates that a property is publicly readable:
+	<code>@readable
+	</code>
+	
+	Indicates that a property is both publicly readable and publicly writable:
+	<code>This property is @readable and @writable
+	</code>
+	
+	Designates a {@link Proper\Filter\Range} filter that accepts numbers between 0 and 255:
+	<code>@filter Range {">=": 0, "<=": 255}
+	</code>
+	
+	Designates a custom filter:
+	<code>@filter \My\Custom\Filter {"foo": "bar"}
+	</code>
+	
+**/
+class JsonAnnotationLoader
 implements Loader
 {
 	/**
@@ -26,6 +62,9 @@ implements Loader
 	const FILTER_TAG = '@filter';
 	
 	
+	/**
+		@inheritdoc
+	**/
 	public function load($class, $property)
 	{
 		if (property_exists($class, $property))
@@ -42,6 +81,12 @@ implements Loader
 	}
 	
 	
+	/**
+		Searches for the `@readable` tag in a property's doc comment.
+		
+		@param   string $docComment  The property's doc comment.
+		@return  boolean             `True` if the property is readable, `false` if not.
+	**/
 	protected static function parseReadability($docComment)
 	{
 		$pattern = '/' . preg_quote(self::READABLE_TAG, '/') . '/m';
@@ -49,6 +94,12 @@ implements Loader
 	}
 	
 	
+	/**
+		Searches for the `@writable` tag in a property's doc comment.
+		
+		@param string $docComment The property's doc comment.
+		@returns `True` if the property is writable, `false` if not.
+	**/
 	protected static function parseWritability($docComment)
 	{
 		$pattern = '/' . preg_quote(self::WRITABLE_TAG, '/') . '\\W/m';
@@ -56,6 +107,12 @@ implements Loader
 	}
 	
 	
+	/**
+		Parses a property's doc comment for `@filter` definitions.
+		
+		@param   string $docComment  The property's doc comment.
+		@return  stdClass[]          A set of objects that indicate the filter's class and parameters.
+	**/
 	protected static function parseFilters($docComment)
 	{
 		$filters = array();
@@ -74,6 +131,14 @@ implements Loader
 	}
 	
 	
+	/**
+		Converts the filter class from the doc comment into a fully-qualified class name.
+		
+		@param   string $class  The name of the class as it appears in the doc comment.
+		@return  string         The fully-qualified class name.
+		@throws  Exception      When the specified class is not defined.
+		@throws  Exception      When the specified class does not implement the {@link Proper\Filter} interface.
+	**/
 	protected static function parseFilterClass($class)
 	{
 		if ($class[0] !== '\\')
@@ -101,6 +166,13 @@ implements Loader
 	}
 	
 	
+	/**
+		Converts JSON-formatted filter options from the doc comment into a PHP object.
+		
+		@param   string $json  The JSON as it appears in the doc comment.
+		@return  mixed         The parsed options.
+		@throws  Exception     When the JSON could not be parsed.
+	**/
 	protected static function parseFilterOptions($json)
 	{
 		if ($options = json_decode($json))

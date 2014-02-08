@@ -7,80 +7,49 @@ use \Proper\Exception\Validation as ValidationException;
 
 /**
 	A statement of the accessiblity of an object's property and the constraints and filters that should be applied to its data.
-	
-	The Definition class uses the {@link http://www.php.net/manual/en/book.reflection.php Reflection API} to extract a textual definition of the property's accessibility and constraints from its doc comment.  The definition is formatted as a JSON object and is introduced with the `@proper` tag.  A definition consists of one or more of the following keys:
-	
-	<ul>
-		<li><b>readable:</b> A boolean indicating whether or not entities outside of the property's class can read its value.</li>
-		<li><b>writable:</b> A boolean indicating whether or not entities outside of the property's class can set its value.</li>
-		<li><b>constraints:</b> An array of constraints to be checked when setting the property's value.  Each key in the array refers to a class that implements {@link Proper\Constraint}, and each value is an array of arguments to be passed to that constraint.  </li>
-		<li><b>filters:</b> An array of filters to be applied when setting the property's value.  Each key in the array refers to a class that implements {@link Proper\Filter}, and each value is an array of arguments to be passed to that filter.</li>
-	</ul>
-	
-	The definition in the example below indicates that a property is publicly readable, but not publicly writable.  No constraints or filters are defined because they are only applicable to properties that can be set by the outside world.
-	
-	* <code>@proper {
-	*   "readable": true,
-	*   "writable": false
-	* };</code>
-	
-	If a key in the constraints or filters array references one of Proper's built-in constraint or filter classes, it can use an abbreviated form of the class name that omits the namespace.  In the example below, the key `"Type"` gets mapped to the {@link Proper\Constraint\TypeConstraint} class.  Constraint and filter classes that are not built into Proper must be referenced by their fully-qualified class names.
-	
-	* <code>@proper {
-	*   "readable": true,
-	*   "writable": true,
-	*   "constraints": {
-	*     "Type": ["numeric"]
-	*   },
-	*   "filters": {
-	*     "Float": [],
-	*     "Round": [2]
-	*   }
-	* };</code>
-	
-	Constraints and filters are evaluated in the order in which they are defined.  A value assigned to a property with the above definition would first be converted to a floating point number by the {@link Proper\Filter\Float} filter, and then rounded to two decimal places by the {@link Proper\Filter\Round} filter.
-	
 **/
 class Property
 {
 	/**
 		The name of the propery.
+		@var string
 	**/
 	protected $name;
 	
 	
 	/**
 		The name of the class the propery belongs to.
+		@var string
 	**/
 	protected $class;
 	
 	
 	/**
 		Whether or not the property is publicly readable.
+		@var boolean
 	**/
 	protected $readable = false;
 	
 	
 	/**
 		Whether or not the property is publicly writable.
+		@var boolean
 	**/
 	protected $writable = false;
 	
 	
 	/**
 		The list of filters on the property's value.
+		@var Proper\Filter[]
 	**/
 	protected $filters = array();
-	
-	
 	
 	
 	/**
 		Initializes a new propery definition for the given property in the given class.
 		
-		@param   string $name       The name of the propery.
-		@param   string $class      The name of the class the propery belongs to.
-		@throws  NotFoundException  When no property with the given name is defined in the given class.
+		@param  string $name   The name of the propery.
+		@param  string $class  The name of the class the propery belongs to.
 	**/
 	public function __construct($propertyName, $className)
 	{
@@ -89,6 +58,14 @@ class Property
 	}
 	
 	
+	/**
+		Loads the property's accessibility information and filter definitions using the given loader.
+		
+		@param   Proper\Loader $loader           The loader to use to retreive the property's info.
+		@throws  Proper\Exception\NotFound       When no property with the given name is defined in the given class.
+		@throws  Proper\Exception\Configuration  When the loader is unable to parse the property's info.
+		@throws  Proper\Exception\Configuration  When one of the property's filters cannot be instantiated.
+	**/
 	public function load(Loader $loader)
 	{
 		try
@@ -122,18 +99,33 @@ class Property
 	}
 	
 	
+	/**
+		Gets the fully-qualified name of the property.
+		
+		@return string The property's name.
+	**/
 	public function getName()
 	{
 		return $this->class . '::$' . $this->name;
 	}
 	
 	
+	/**
+		Checks whether the property is readable.
+		
+		@return boolean `True` if the property is readable, `false` if not.
+	**/
 	public function isReadable()
 	{
 		return $this->readable;
 	}
 	
 	
+	/**
+		Checks whether the property is writable.
+		
+		@return boolean `True` if the property is writable, `false` if not.
+	**/
 	public function isWritable()
 	{
 		return $this->writable;
@@ -141,11 +133,11 @@ class Property
 	
 	
 	/**
-		Checks the given value against the list of constraints.
+		Applies each of the property's filters to the given value.
 		
-		@param   mixed $value         The value to check.
-		@return  boolean              True when the provided value satisfies all constraints
-		@throws  ConstraintViolation  When the provided value does not satisfy a constraint.
+		@param   mixed $value                 The value to check.
+		@return  mixed                        The filtered value.
+		@throws  Proper\Exception\Validation  When the provided value does not satisfy a constraint imposed by one of the filters.
 	**/
 	public function applyFilters($value)
 	{
