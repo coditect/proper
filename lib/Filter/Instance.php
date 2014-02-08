@@ -1,44 +1,41 @@
 <?php namespace Proper\Filter;
 
+use \Exception;
+use \Proper\Filter;
+
+
 class Instance
-extends AbstractFilter
+implements Filter
 {
 	protected $className;
 	protected $allowNull;
 	
 	
-	public function init($options)
+	public function __construct($options)
 	{
-		if (class_exists($options->class, true))
+		if (class_exists($options->class))
 		{
 			$this->className = $options->class;
 		}
 		else
 		{
-			throw new \Proper\ConfigurationException($this->property, "Class $options is not defined");
+			throw new Exception("Class {$options->class} is not defined");
 		}
 		
 		$this->allowNull = isset($options->null) && (bool) $options->null;
 	}
 	
 	
-	public function isValid($value)
+	public function apply($value)
 	{
-		if ($this->allowNull && is_null($value))
+		if (($this->allowNull && is_null($value)) || (is_object($value) && $value instanceof $this->className))
 		{
-			return true;
+			return $value;
 		}
 		else
 		{
-			return is_object($value) && $value instanceof $this->className;
+			$given_class = is_object($value) ? get_class($value) : 'non-object';
+			throw new Exception("Expecting an instance of {$this->className}, $given_class given");
 		}
-	}
-	
-	
-	public function getError($value)
-	{
-		$property = $this->property->getPropertyIdentifier();
-		$class = is_object($value) ? get_class($value) : 'non-object';
-		return "$property must be an instance of {$this->className}, $class given";
 	}
 }

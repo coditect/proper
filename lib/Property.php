@@ -1,5 +1,10 @@
 <?php namespace Proper;
 
+use \Exception;
+use \Proper\Exception\Configuration as ConfigurationException;
+use \Proper\Exception\Validation as ValidationException;
+
+
 /**
 	A statement of the accessiblity of an object's property and the constraints and filters that should be applied to its data.
 	
@@ -36,7 +41,7 @@
 	Constraints and filters are evaluated in the order in which they are defined.  A value assigned to a property with the above definition would first be converted to a floating point number by the {@link Proper\Filter\Float} filter, and then rounded to two decimal places by the {@link Proper\Filter\Round} filter.
 	
 **/
-class Definition
+class Property
 {
 	/**
 		The name of the propery.
@@ -53,13 +58,13 @@ class Definition
 	/**
 		Whether or not the property is publicly readable.
 	**/
-	public $readable = false;
+	protected $readable = false;
 	
 	
 	/**
 		Whether or not the property is publicly writable.
 	**/
-	public $writable = false;
+	protected $writable = false;
 	
 	
 	/**
@@ -84,80 +89,78 @@ class Definition
 	}
 	
 	
-	
-	public function getDocComment()
+	public function load(Loader $loader)
 	{
-		if (property_exists($this->class, $this->name))
+		try
 		{
-			$reflection = new \ReflectionProperty($this->class, $this->name);
-			return $reflection->getDocComment();
+			if ($def = $loader->load($this->class, $this->name))
+			{
+				$this->readable = $def->readable;
+				$this->writable = $def->writable;
+				
+				foreach ($def->filters as $class => $params)
+				{
+					try
+					{
+						$this->filters[] = new $class($params);
+					}
+					catch (Exception $e)
+					{
+						throw new ConfigurationException($this, $filter, $e);
+					}
+				}
+			}
+			else
+			{
+				throw new Exception\NotFound($this);
+			}
 		}
-		else
+		catch (Exception $e)
 		{
-			throw new NotFoundException($this);
+			throw new ConfigurationException($this, null, $e);
 		}
 	}
 	
 	
-	public function getDefinitionParser()
+	public function getName()
 	{
-		return new Parser\Standard($this);
+		return $this->class . '::$' . $this->name;
 	}
 	
 	
-	public function parseDefinition($definition, Parser $parser)
+	public function isReadable()
 	{
-		$access = $parser->parseAccess($definition);
-		$this->readable = $access->readable;
-		$this->writable = $access->writable;
-		
-		foreach ($parser->parseFilters($definition) as $class => $options)
-		{
-			$this->filters[] = new $class($this, $options);
-		}
+		return $this->readable;
 	}
 	
 	
-	public function parseDefinitionFromDocComment()
+	public function isWritable()
 	{
-		$comment = $this->getDocComment();
-		$parser = $this->getDefinitionParser();
-		$this->parseDefinition($comment, $parser);
+		return $this->writable;
 	}
-	
-	
-
-	
-	
-	
 	
 	
 	/**
 		Checks the given value against the list of constraints.
 		
 		@param   mixed $value         The value to check.
-		@param   boolean $throw       Whether or not to throw an exception if the value does not satisfy a constraint.
 		@return  boolean              True when the provided value satisfies all constraints
 		@throws  ConstraintViolation  When the provided value does not satisfy a constraint.
 	**/
-	public function check($value)
+	public function applyFilters($value)
 	{
 		foreach ($this->filters as $filter)
 		{
-			$value = $filter->applyTo($value);
+			try
+			{
+				$value = $filter->apply($value);
+			}
+			catch (Exception $e)
+			{
+				throw new ValidationException($this, $filter, $e);
+			}
 		}
 		
 		return $value;
-	}
-	
-	
-	/**
-		Generates a string that identifies the defined property.
-		
-		@return  string  The property identifier.
-	**/
-	public function getPropertyIdentifier()
-	{
-		return $this->class . '::$' . $this->name;
 	}
 }

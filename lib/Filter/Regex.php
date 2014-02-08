@@ -1,34 +1,35 @@
 <?php namespace Proper\Filter;
 
+use \Exception;
+use \Proper\Filter;
+
+
 class Regex
-extends AbstractFilter
+implements Filter
 {
 	protected $pattern;
 	
 	
-	public function init($options)
+	public function __construct($pattern)
 	{
-		$this->pattern = $options;
-	}
-	
-	
-	public function isValid($value)
-	{
-		if (($numMatches = preg_match($this->pattern, $value)) === false)
+		if (preg_match($pattern, '') !== false)
 		{
-			$message = var_export($this->pattern, true) . ' is not a valid regular expression';
-			throw new \Proper\ConfigurationException($this->property, $message);
+			$this->pattern = $pattern;
 		}
-		
-		return $numMatches > 0;
+		else
+		{
+			throw new Exception(var_export($pattern, true) . ' is not a valid regular expression');
+		}
 	}
 	
 	
-	public function getError($value)
+	public function apply($value)
 	{
-		$property = $this->property->getPropertyIdentifier();
-		$pattern = var_export($this->pattern, true);
-		$value = var_export($value, true);
-		return "$property must match the regular expression $pattern, $value given";
+		if (preg_match($this->pattern, $value) === 0)
+		{
+			$pattern = var_export($this->pattern, true);
+			$value = var_export($value, true);
+			throw new Exception("$value does not match the regular expression $pattern");
+		}
 	}
 }

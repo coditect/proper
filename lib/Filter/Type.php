@@ -1,69 +1,80 @@
 <?php namespace Proper\Filter;
 
+use \Exception;
+use \Proper\Filter;
+
+
 class Type
-extends AbstractFilter
+implements Filter
 {
 	protected $allowedTypes = array();
-	protected $typeToForce = null;
+	protected $castFunction = null;
 	protected $radix = null;
 	
 	
-	protected function init($options)
+	public function __construct($options)
 	{
-		if (isset($options->allowed))
+		if (isset($options->allow))
 		{
-			if (is_array($options->allowed))
+			foreach ((array) $options->allow as $type)
 			{
-				$this->allowedTypes = $options->allowed;
-			}
-			else
-			{
-				$this->allowedTypes = array($options->allowed);
+				$this->allowedTypes[] = self::getNormalizedType($type);
 			}
 		}
 		
 		if (isset($options->force))
 		{
-			$this->typeToForce = strtolower($options->force);
+			$this->castFunction = self::getCastFunctionForType($options->force);
 			
-			if ($this->typeToForce == 'int' && isset($options->radix))
+			if ($this->castFunction == 'castToInteger' && isset($options->radix))
 			{
-				$this->radix = $options->radix;
+				if (is_int($options->radix))
+				{
+					$this->radix = $options->radix;
+				}
+				else
+				{
+					throw new Exception('Radix must be an integer');
+				}
 			}
 		}
 	}
 	
 	
-	public function isValid($value)
+	public function apply($value)
 	{
-		if (!empty($this->allowedTypes))
+		if ($this->isValidType($value))
+		{
+			if (!is_null($this->castFunction))
+			{
+				return $this->{$this->castFunction}($value);
+			}
+			else
+			{
+				return $value;
+			}
+		}
+		else
+		{
+			throw new Exception($this->getError($value));
+		}
+	}
+	
+	
+	protected function isValidType($value)
+	{
+		if (count($this->allowedTypes) > 0)
 		{
 			foreach ($this->allowedTypes as $type)
 			{
-				$function = 'is_' . strtolower($type);
-			
-				if (!function_exists($function))
-				{
-					if ($function === 'is_str')
-					{
-						$function = 'is_string';
-					}
-					else if ($function === 'is_boolean')
-					{
-						$function = 'is_bool';
-					}
-					else
-					{
-						throw new \Proper\ConfigurationException($this->property, $type . ' is not a valid type');
-					}
-				}
-			
+				$function = 'is_' . $type;
+				
 				if ($function($value))
 				{
 					return true;
 				}
 			}
-		
+			
 			return false;
 		}
 		
@@ -71,45 +82,10 @@ extends AbstractFilter
 	}
 	
 	
-	public function transform($value)
+	protected function getError($value)
 	{
-		if (!is_null($this->typeToForce))
-		{
-			switch ($this->typeToForce)
-			{
-				case 'int':
-				case 'integer':
-				case 'long':
-					return intval($value, $this->radix);
-				
-				case 'double':
-				case 'float':
-				case 'real':
-					return floatval($value);
-				
-				case 'str':
-				case 'string':
-					return strval($value);
-				
-				case 'bool':
-				case 'boolean':
-					return (bool) $value;
-				
-				default:
-					throw new \Proper\ConfigurationException($this->property, "Cannot cast to type {$this->typeToForce}");
-			}
-		}
-		else
-		{
-			return $value;
-		}
-	}
-	
-	
-	public function getError($value)
-	{
-		$property = $this->property->getPropertyIdentifier();
-		$message = "$property must be of type ";
+		//$property = $this->property->getPropertyIdentifier();
+		$message = 'Expecting type ';
 		$numTypes = count($this->allowedTypes);
 		$givenType = gettype($value);
 		
@@ -139,5 +115,82 @@ extends AbstractFilter
 		
 		$message .= ", $givenType given";
 		return $message;
+	}
+	
+	
+	protected function castToInteger($value)
+	{
+		return intval($value, $this->radix);
+	}
+	
+	
+	protected function castToFloat($value)
+	{
+		return intval($value);
+	}
+	
+	
+	protected function castToString($value)
+	{
+		return strval($value);
+	}
+	
+	
+	protected function castToBoolean($value)
+	{
+		return (bool) $value;
+	}
+	
+	
+	protected static function getNormalizedType($type)
+	{
+		$normalized_type = strtolower($type);
+		$check_function = 'is_' . $normalized_type;
+	
+		if (!function_exists($check_function))
+		{
+			if ($check_function === 'is_str')
+			{
+				return 'string';
+			}
+			else if ($check_function === 'is_boolean')
+			{
+				return 'bool';
+			}
+			else
+			{
+				throw new Exception($type . ' is not a valid type');
+			}
+		}
+		
+		return $normalized_type;
+	}
+	
+	
+	protected static function getCastFunctionForType($type)
+	{
+		switch (strtolower($type))
+		{
+			case 'int':
+			case 'integer':
+			case 'long':
+				return 'castToInteger';
+			
+			case 'double':
+			case 'float':
+			case 'real':
+				return 'castToFloat';
+			
+			case 'str':
+			case 'string':
+				return 'castToString';
+			
+			case 'bool':
+			case 'boolean':
+				return 'castToBoolean';
+			
+			default:
+				throw new Exception("Cannot cast to type '$type'");
+		}
 	}
 }
