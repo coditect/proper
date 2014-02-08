@@ -64,9 +64,10 @@ implements Loader
 		
 		foreach ($matches as $match)
 		{
-			$class = self::parseFilterClass($match[1]);
-			$options = self::parseFilterOptions($match[2], $class);
-			$filters[$class] = $options;
+			$filter = new \stdClass();
+			$filter->class = self::parseFilterClass($match[1]);
+			$filter->options = self::parseFilterOptions($match[2], $filter->class);
+			$filters[] = $filter;
 		}
 		
 		return $filters;

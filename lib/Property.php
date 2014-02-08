@@ -98,11 +98,11 @@ class Property
 				$this->readable = $def->readable;
 				$this->writable = $def->writable;
 				
-				foreach ($def->filters as $class => $params)
+				foreach ($def->filters as $filter)
 				{
 					try
 					{
-						$this->filters[] = new $class($params);
+						$this->filters[] = new $filter->class($filter->options);
 					}
 					catch (Exception $e)
 					{
