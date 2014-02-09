@@ -4,28 +4,61 @@ use \Exception;
 use \Proper\Filter;
 
 
+/**
+	The Instance filter checks that an object is an instance of a class or interface.
+**/
 class Instance
 implements Filter
 {
+	/**
+		The fully-qualfied name of the class or interface.
+		
+		@var string
+	**/
 	protected $className;
-	protected $allowNull;
 	
 	
-	public function __construct($options)
+	/**
+		Whether or not to permit null values.
+		
+		@var boolean
+	**/
+	protected $allowNull = false;
+	
+	
+	/**
+		Initializes the filter with an object containing the following keys:
+		- **class**: The fully-qualfied name of the expected class or interface.
+		- **null**: Whether or not to permit null values.  Defaults to `false`.
+		
+		@param   object $rules  The filter rules.
+		@throws  Exception      When the given class is not defined.
+	**/
+	public function __construct($rules)
 	{
-		if (class_exists($options->class))
+		if (class_exists($rules->class))
 		{
-			$this->className = $options->class;
+			$this->className = $rules->class;
 		}
 		else
 		{
-			throw new Exception("Class {$options->class} is not defined");
+			throw new Exception("Class {$rules->class} is not defined");
 		}
 		
-		$this->allowNull = isset($options->null) && (bool) $options->null;
+		if (isset($rules->null))
+		{
+			$this->allowNull =  (bool) $rules->null;
+		}
 	}
 	
 	
+	/**
+		Validates the class of an object.
+		
+		@param   object $value  The object  to be validated.
+		@return  object         The given value, if it satisfies the filter's requirements.
+		@throws  Exception      When the given value is not an object or is not an instance of the expected class or interface.
+	**/
 	public function apply($value)
 	{
 		if (($this->allowNull && is_null($value)) || (is_object($value) && $value instanceof $this->className))
