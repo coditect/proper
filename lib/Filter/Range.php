@@ -4,13 +4,46 @@ use \Exception;
 use \Proper\Filter;
 
 
+/**
+	The Range filter validates that a given value falls within a specified range.
+	
+	A range (or *interval*, in mathematical parlance) may specify an upper bound, a lower bound, both, or neither†.  Each end of the range can be open (excluding the fixed value of the bound) or closed (including it).  A Range filter can model the union of two disjoint half-bounded intervals by specifying a lower bound that is greater than the upper bound.
+	
+	† The utility of specifying a range that corresponds to the universal set within the context of data validation is dubious, but the capability is there should the need arise.
+**/
 class Range
 implements Filter
 {
-	protected $min;
-	protected $minExclusive;
-	protected $max;
-	protected $maxExclusive;
+	/**
+		The upper bound of the range.
+		
+		@var int|float
+	**/
+	protected $upper;
+	
+	
+	/**
+		The lower bound of the range.
+		
+		@var integer|float
+	**/
+	protected $lower;
+	
+	
+	/**
+		Whether or not the range includes or excludes its upper bound.
+		
+		@var boolean
+	**/
+	protected $includesUpper;
+	
+	
+	/**
+		Whether or not the range includes or excludes its lower bound.
+		
+		@var boolean
+	**/
+	protected $includesLower;
 	
 	
 	/**
@@ -20,7 +53,7 @@ implements Filter
 		- **lessThan**, **lt**, or **<**: The maxiumum (exclusive) value.
 		- **lessThanOrEqualTo**, **lte**, or **<=**: The maxiumum (inclusive) value.
 		
-		@param   object $rules  The miniumum and/or maxiumum values.
+		@param  object $rules  The upper and/or lower bounds of the range.
 	**/
 	public function __construct($rules)
 	{
@@ -31,52 +64,59 @@ implements Filter
 				case '>':
 				case 'gt':
 				case 'greaterThan':
-					$this->min = floatval($value);
-					$this->minExclusive = true;
+					$this->lower = floatval($value);
+					$this->includesLower = false;
 					break;
 				
 				case '>=':
 				case 'gte':
 				case 'greaterThanOrEqualTo':
 				case 'min':
-					$this->min = floatval($value);
-					$this->minExclusive = false;
+					$this->lower = floatval($value);
+					$this->includesLower = true;
 					break;
 				
 				case '<':
 				case 'lt':
 				case 'lessThan':
-					$this->max = floatval($value);
-					$this->maxExclusive = true;
+					$this->upper = floatval($value);
+					$this->includesUpper = false;
 					break;
 				
-				case '>=':
+				case '<=':
 				case 'lte':
 				case 'lessThanOrEqualTo':
 				case 'max':
-					$this->max = floatval($value);
-					$this->maxExclusive = false;
+					$this->upper = floatval($value);
+					$this->includesUpper = true;
 					break;
 			}
 		}
 	}
 	
 	
+	/**
+		Checks that the given value falls within the specified range.
+		
+		@param   integer|float  The value to be validated.
+		@return  integer|float  The given value, if it falls within the specified range.
+		@throws  Exception      When the given value does not fall within the specified range.
+	**/
 	public function apply($value)
 	{
-		$minSatisfied = $this->checkMin($value);
-		$maxSatisfied = $this->checkMax($value);
+		$lessThanUpper = $this->checkUpper($value);
+		$greaterThanLower = $this->checkLower($value);
 		
-		if ($this->min > $this->max && !is_null($this->min) && !is_null($this->max))
+		if ($this->upper > $this->lower && !is_null($this->upper) && !is_null($this->lower))
 		{
-			if (!$minSatisfied && !$maxSatisfied)
+			if (!$lessThanUpper && !$greaterThanLower)
 			{
 				throw new Exception($this->getError($value));
 			}
 		}
 		else
 		{
-			if (!$minSatisfied || !$maxSatisfied)
+			if (!$lessThanUpper || !$greaterThanLower)
 			{
 				throw new Exception($this->getError($value));
 			}
@@ -86,17 +126,23 @@ implements Filter
 	}
 	
 	
-	protected function checkMin($value)
+	/**
+		Checks that the given value is less than the range's maximum.
+		
+		@param   mixed    The value to be validated.
+		@return  boolean  `True` if the value is less than the upper bound, `false` otherwise.
+	**/
+	protected function checkUpper($value)
 	{
-		if (!is_null($this->min))
+		if (!is_null($this->upper))
 		{
-			if ($this->minExclusive)
+			if ($this->includesUpper)
 			{
-				return $value > $this->min;
+				return $value <= $this->upper;
 			}
 			else
 			{
-				return $value >= $this->min;
+				return $value < $this->upper;
 			}
 		}
 		
@@ -104,17 +150,23 @@ implements Filter
 	}
 	
 	
-	protected function checkMax($value)
+	/**
+		Checks that the given value is greater than the range's minimum.
+		
+		@param   mixed    The value to be validated.
+		@return  boolean  `True` if the value is greater than the lower bound, `false` otherwise.
+	**/
+	protected function checkLower($value)
 	{
-		if (!is_null($this->max))
+		if (!is_null($this->lower))
 		{
-			if ($this->maxExclusive)
+			if ($this->includesLower)
 			{
-				return $value < $this->max;
+				return $value >= $this->lower;
 			}
 			else
 			{
-				return $value <= $this->max;
+				return $value > $this->lower;
 			}
 		}
 		
@@ -122,59 +174,75 @@ implements Filter
 	}
 	
 	
+	/**
+		Generates an error message for a value that falls outside of the range.
+		
+		@param   mixed   The value that failed validation.
+		@return  string  The error message.
+	**/
 	protected function getError($value)
 	{
-		$minExpectation = $this->getMinExpectation();
-		$maxExpectation = $this->getMaxExpectation();
+		$upperText = $this->getUpperText();
+		$lowerText = $this->getLowerText();
 		
 		$message = 'Expecting a value ';
 		
-		if ($minExpectation && $maxExpectation)
+		if ($upperText && $lowerText)
 		{
-			$joiner = $this->min > $this->max ? 'or' : 'and';
-			$message .= "$minExpectation $joiner $maxExpectation";
+			$conjunction = $this->lower > $this->upper ? 'or' : 'and';
+			$message .= "$lowerText $conjunction $upperText";
 		}
-		else if ($minExpectation)
+		else if ($lowerText)
 		{
-			$message .= $minExpectation;
+			$message .= $lowerText;
 		}
 		else
 		{
-			$message .= $maxExpectation;
+			$message .= $upperText;
 		}
 		
 		return $message . ', ' . var_export($value, true) . ' given';
 	}
 	
 	
-	protected function getMinExpectation()
+	/**
+		Produces a textual description of the range's upper bound.
+		
+		@return string
+	**/
+	protected function getUpperText()
 	{
-		if (!is_null($this->min))
+		if (!is_null($this->upper))
 		{
-			$minExpectation = 'greater than ';
+			$upperText = 'less than ';
 			
-			if (!$this->minExclusive)
+			if ($this->includesUpper)
 			{
-				$minExpectation .= 'or equal to ';
+				$upperText .= 'or equal to ';
 			}
 			
-			return $minExpectation . var_export($this->min, true);
+			return $upperText . var_export($this->upper, true);
 		}
 	}
 	
 	
-	protected function getMaxExpectation()
+	/**
+		Produces a textual description of the range's lower bound.
+		
+		@return string
+	**/
+	protected function getLowerText()
 	{
-		if (!is_null($this->max))
+		if (!is_null($this->lower))
 		{
-			$maxExpectation = 'less than ';
+			$lowerText = 'greater than ';
 			
-			if (!$this->maxExclusive)
+			if ($this->includesLower)
 			{
-				$maxExpectation .= 'or equal to ';
+				$lowerText .= 'or equal to ';
 			}
 			
-			return $maxExpectation . var_export($this->max, true);
+			return $lowerText . var_export($this->lower, true);
 		}
 	}
 }
