@@ -13,28 +13,51 @@ implements Filter
 	protected $maxExclusive;
 	
 	
-	public function __construct($params)
-	{
-		if (isset($params->{'>'}))
-		{
-			$this->min = floatval($params->{'>'});
-			$this->minExclusive = true;
-		}
-		else if (isset($params->{'>='}))
-		{
-			$this->min = floatval($params->{'>='});
-			$this->minExclusive = false;
-		}
+	/**
+		Initializes the filter with an object containing one or more of the following keys:
+		- **greaterThan**, **gt**, or **>**: The miniumum (exclusive) value.
+		- **greaterThanOrEqualTo**, **gte**, or **>=**: The miniumum (inclusive) value.
+		- **lessThan**, **lt**, or **<**: The maxiumum (exclusive) value.
+		- **lessThanOrEqualTo**, **lte**, or **<=**: The maxiumum (inclusive) value.
 		
-		if (isset($params->{'<'}))
+		@param   object $rules  The miniumum and/or maxiumum values.
+	**/
+	public function __construct($rules)
+	{
+		foreach ($rules as $key => $value)
 		{
-			$this->max = floatval($params->{'>'});
-			$this->maxExclusive = true;
-		}
-		else if (isset($params->{'<='}))
-		{
-			$this->max = floatval($params->{'<='});
-			$this->maxExclusive = false;
+			switch ($key)
+			{
+				case '>':
+				case 'gt':
+				case 'greaterThan':
+					$this->min = floatval($value);
+					$this->minExclusive = true;
+					break;
+				
+				case '>=':
+				case 'gte':
+				case 'greaterThanOrEqualTo':
+				case 'min':
+					$this->min = floatval($value);
+					$this->minExclusive = false;
+					break;
+				
+				case '<':
+				case 'lt':
+				case 'lessThan':
+					$this->max = floatval($value);
+					$this->maxExclusive = true;
+					break;
+				
+				case '>=':
+				case 'lte':
+				case 'lessThanOrEqualTo':
+				case 'max':
+					$this->max = floatval($value);
+					$this->maxExclusive = false;
+					break;
+			}
 		}
 	}
 	
