@@ -9,10 +9,10 @@ interface Constraint
 	/**
 		Initializes the constraint.
 		
-		@param   mixed $params  A set of parameters that describe the values the constraint will allow or disallow.
-		@throws  Exception      When the given parameters are incomplete, contradictory, or otherwise invalid.
+		@param   mixed $rules  The rules that govern what values the constraint will allow and disallow.
+		@throws  Exception     When the given rules are incomplete, contradictory, or otherwise invalid.
 	**/
-	public function __construct($params);
+	public function __construct($rules);
 	
 	
 	/**
