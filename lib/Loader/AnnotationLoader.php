@@ -41,7 +41,7 @@ use \Proper\Loader;
 	</code>
 	
 **/
-class JsonAnnotationLoader
+class AnnotationLoader
 implements Loader
 {
 	/**
@@ -75,7 +75,7 @@ implements Loader
 			$definition = new \stdClass();
 			$definition->readable = self::parseReadability($docComment);
 			$definition->writable = self::parseWritability($docComment);
-			$definition->filters = self::parseFilters($docComment);
+			$definition->actions = self::parseActions($docComment);
 			return $definition;
 		}
 	}
@@ -108,90 +108,51 @@ implements Loader
 	
 	
 	/**
-		Parses a property's doc comment for `@filter` definitions.
+		Parses a property's doc comment for `@constraint` and `@filter` definitions.
 		
 		@param   string $docComment  The property's doc comment.
 		@return  stdClass[]          A set of objects that indicate the filter's class and parameters.
 	**/
-	protected static function parseFilters($docComment)
+	protected static function parseActions($docComment)
 	{
-		$filters = array();
-		$pattern = '/^[\s\*]*' . preg_quote(self::FILTER_TAG, '/') . '\s+(\S+)\s+(.*)$/m';
+		$actions = array();
+		$pattern = '/^[\s\*]*@(constraint|filter)\s+(\S+):(.*)$/m';
 		preg_match_all($pattern, $docComment, $matches, PREG_SET_ORDER);
 		
 		foreach ($matches as $match)
 		{
-			$filter = new \stdClass();
-			$filter->class = self::parseFilterClass($match[1]);
-			$filter->options = self::parseFilterOptions($match[2], $filter->class);
-			$filters[] = $filter;
-		}
-		
-		return $filters;
-	}
-	
-	
-	/**
-		Converts the filter class from the doc comment into a fully-qualified class name.
-		
-		@param   string $class  The name of the class as it appears in the doc comment.
-		@return  string         The fully-qualified class name.
-		@throws  Exception      When the specified class is not defined.
-		@throws  Exception      When the specified class does not implement the {@link Proper\Filter} interface.
-	**/
-	protected static function parseFilterClass($class)
-	{
-		if ($class[0] !== '\\')
-		{
-			$class = '\\Proper\\Filter\\' . ucfirst($class);
-		}
-		
-		if (class_exists($class))
-		{
-			$reflection = new ReflectionClass($class);
+			$action = new \stdClass();
+			$action->type = ucfirst(strtolower($match[1]));
+			$action->class = $match[2];
+			$action->rules = trim($match[3]);
 			
-			if ($reflection->implementsInterface('\\Proper\\Filter'))
+			$typeClass = '\\Proper\\' . $action->type;
+			$typeNamespace = $typeClass . '\\';
+			
+			if ($action->class[0] !== '\\')
 			{
-				return $class;
+				$action->class = $typeNamespace . $action->class;
+			}
+			
+			if (class_exists($action->class))
+			{
+				$reflection = new ReflectionClass($action->class);
+			
+				if ($reflection->implementsInterface($typeClass))
+				{
+					$actions[] = $action;
+				}
+				else
+				{
+					throw new Exception("$class is not an instance of $typeClass");
+				}
 			}
 			else
 			{
-				throw new Exception("$class is not an instance of \\Proper\\Filter");
+				throw new Exception("{$action->type} {$action->class} is not defined");
 			}
 		}
-		else
-		{
-			throw new Exception("Filter $class is not defined");
-		}
-	}
-	
-	
-	/**
-		Converts JSON-formatted filter options from the doc comment into a PHP object.
 		
-		@param   string $json  The JSON as it appears in the doc comment.
-		@return  mixed         The parsed options.
-		@throws  Exception     When the JSON could not be parsed.
-	**/
-	protected static function parseFilterOptions($json)
-	{
-		if ($options = json_decode($json))
-		{
-			return $options;
-		}
-		else
-		{
-			$jsonErrors = array(
-				JSON_ERROR_DEPTH => 'exceeds the maximum stack depth',
-				JSON_ERROR_STATE_MISMATCH => 'is invalid or malformed',
-				JSON_ERROR_CTRL_CHAR => 'contains an incorrectly encoded control character',
-				JSON_ERROR_SYNTAX => 'contains a syntax error',
-				JSON_ERROR_UTF8 => 'contains malformed UTF-8 characters'
-			);
-			
-			$errorCode = json_last_error();
-			$errorMessage = isset($jsonErrors[$errorCode]) ? $jsonErrors[$errorCode] : null;
-			throw new Exception('The JSON configuration ' . $errorMessage);
-		}
+		return $actions;
 	}
 }

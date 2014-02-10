@@ -106,7 +106,7 @@ trait Properties
 	{
 		if (!isset(static::$proper__loader))
 		{
-			static::$proper__loader = new Loader\JSONAnnotationLoader;
+			static::$proper__loader = new Loader\AnnotationLoader;
 		}
 		
 		if (!isset(static::$proper__properties[$name]))

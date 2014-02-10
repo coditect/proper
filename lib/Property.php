@@ -42,7 +42,7 @@ class Property
 		The list of filters on the property's value.
 		@var Proper\Filter[]
 	**/
-	protected $filters = array();
+	protected $actions = array();
 	
 	
 	/**
@@ -75,15 +75,15 @@ class Property
 				$this->readable = $def->readable;
 				$this->writable = $def->writable;
 				
-				foreach ($def->filters as $filter)
+				foreach ($def->actions as $action)
 				{
 					try
 					{
-						$this->filters[] = new $filter->class($filter->options);
+						$this->actions[] = new $action->class($action->rules);
 					}
 					catch (Exception $e)
 					{
-						throw new ConfigurationException($this, $filter, $e);
+						throw new ConfigurationException($this, $action, $e);
 					}
 				}
 			}
@@ -141,15 +141,19 @@ class Property
 	**/
 	public function applyFilters($value)
 	{
-		foreach ($this->filters as $filter)
+		foreach ($this->actions as $action)
 		{
-			try
+			if ($action instanceof Constraint)
 			{
-				$value = $filter->apply($value);
+				if ($error = $action->apply($value))
+				{
+					//throw new ValidationException($this, $action, $error);
+					echo $error;
+				}
 			}
-			catch (Exception $e)
+			else
 			{
-				throw new ValidationException($this, $filter, $e);
+				$value = $action->apply($value);
 			}
 		}
 		
