@@ -107,7 +107,7 @@ implements Filter
 		$lessThanUpper = $this->checkUpper($value);
 		$greaterThanLower = $this->checkLower($value);
 		
-		if ($this->upper > $this->lower && !is_null($this->upper) && !is_null($this->lower))
+		if ($this->upper < $this->lower && !is_null($this->upper) && !is_null($this->lower))
 		{
 			if (!$lessThanUpper && !$greaterThanLower)
 			{
