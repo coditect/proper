@@ -1,14 +1,14 @@
-<?php namespace Proper\Filter;
+<?php namespace Proper\Constraint;
 
 use \Exception;
-use \Proper\Filter;
+use \Proper\Constraint;
 
 
 /**
-	The Regex filter validates that a given string matches a regular expression.
+	The Regex constraint validates that a given string matches or does not match a regular expression.
 **/
 class Regex
-implements Filter
+implements Constraint
 {
 	/**
 		The regular expression to check against.
@@ -27,7 +27,7 @@ implements Filter
 	
 	
 	/**
-		Initializes the filter with a string containing a Perl-compatible regular expression.  The regular expression may be prefixed with a "!" to indicate that only strings that do **not** match the pattern should be considered valid.
+		Initializes the constraint with a string containing a Perl-compatible regular expression.  The regular expression may be prefixed with a "!" to indicate that only strings that do **not** match the pattern should be considered valid.
 		
 		@param   string $pattern  The regular expression to check against.
 		@throws  Exception        When the regular expression is not valid.
@@ -54,9 +54,8 @@ implements Filter
 	/**
 		Validates the given string.
 		
-		@param   string     The string to be validated.
-		@return  string     The given string, if it matches the pattern.
-		@throws  Exception  When the given value does not match the pattern.
+		@param   string $value  The string to be validated.
+		@return  string         An error message, if the string is invalid.
 	**/
 	public function apply($value)
 	{
@@ -66,16 +65,14 @@ implements Filter
 		{
 			$pattern = var_export($this->pattern, true);
 			$value = var_export($value, true);
-			throw new Exception("$value does not match the regular expression $pattern");
+			return "$value does not match the regular expression $pattern";
 		}
 		
 		else if (!$this->shouldMatch && $matches === 1)
 		{
 			$pattern = var_export($this->pattern, true);
 			$value = var_export($value, true);
-			throw new Exception("$value must not match the regular expression $pattern");
+			return "$value must not match the regular expression $pattern";
 		}
-		
-		return $value;
 	}
 }
