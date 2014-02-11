@@ -1,14 +1,11 @@
 <?php namespace Proper\Constraint;
 
-use \Exception;
-use \Proper\Constraint;
-
 
 /**
 	The Instance constraint checks that an object is an instance of a class or interface.
 **/
 class Instance
-implements Constraint
+implements \Proper\Constraint
 {
 	/**
 		The fully-qualfied name of the class or interface.
@@ -51,8 +48,6 @@ implements Constraint
 		{
 			$this->allowNull = true;
 		}
-		
-		print_r($this);
 	}
 	
 	
