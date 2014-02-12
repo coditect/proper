@@ -45,21 +45,21 @@ class AnnotationLoader
 implements Loader
 {
 	/**
-		The tag that marks a property as being publicly readable.
+		The regular expression used to search for the `@readable` tag in a doc comment.
 	**/
-	const READABLE_TAG = '@readable';
+	const READABLITY_PATTERN = '/@readable\\b/m';
 	
 	
 	/**
-		The tag that marks a property as being publicly writable.
+		The regular expression used to search for the `@writable` tag in a doc comment.
 	**/
-	const WRITABLE_TAG = '@writable';
+	const WRITABLITY_PATTERN = '/@writable\\b/m';
 	
 	
 	/**
-		The tag that introduces a property filter definition in a doc comment.
+		The regular expression used to search for action definitions in a doc comment.
 	**/
-	const FILTER_TAG = '@filter';
+	const ACTION_PATTERN = '/^[\s\*]*@(constraint|filter)\s+([^\s:]+):?(.*)$/m';
 	
 	
 	/**
@@ -89,8 +89,7 @@ implements Loader
 	**/
 	protected static function parseReadability($docComment)
 	{
-		$pattern = '/' . preg_quote(self::READABLE_TAG, '/') . '/m';
-		return preg_match($pattern, $docComment) === 1;
+		return preg_match(static::READABLITY_PATTERN, $docComment) === 1;
 	}
 	
 	
@@ -102,29 +101,30 @@ implements Loader
 	**/
 	protected static function parseWritability($docComment)
 	{
-		$pattern = '/' . preg_quote(self::WRITABLE_TAG, '/') . '\\W/m';
-		return preg_match($pattern, $docComment) === 1;
+		return preg_match(static:WRITABLITY_PATTERN, $docComment) === 1;
 	}
 	
 	
 	/**
-		Parses a property's doc comment for `@constraint` and `@filter` definitions.
+		Parses a property's doc comment for constraint and filter definitions.
 		
 		@param   string $docComment  The property's doc comment.
-		@return  stdClass[]          A set of objects that indicate the filter's class and parameters.
+		@return  stdClass[]          A set of objects which each indicate a different action's class and parameters.
+		@throws  Exception           When an action's class is not defined.
+		@throws  Exception           When an action's class does not implement the appropriate interface.
 	**/
 	protected static function parseActions($docComment)
 	{
 		$actions = array();
-		$pattern = '/^[\s\*]*@(constraint|filter)\s+(\S+):(.*)$/m';
-		preg_match_all($pattern, $docComment, $matches, PREG_SET_ORDER);
+		$pattern = '/^[\s\*]*@(constraint|filter)\s+([^\s:]+):?(.*)$/m';
+		preg_match_all(static::ACTION_PATTERN, $docComment, $matches, PREG_SET_ORDER);
 		
 		foreach ($matches as $match)
 		{
 			$action = new \stdClass();
 			$action->type = ucfirst(strtolower($match[1]));
 			$action->class = $match[2];
-			$action->rules = trim($match[3]);
+			$action->rules = isset($match[3]) ? trim($match[3]) : null;
 			
 			$typeClass = '\\Proper\\' . $action->type;
 			$typeNamespace = $typeClass . '\\';
