@@ -7,15 +7,6 @@
 interface Filter
 {
 	/**
-		Initializes the filter with a set of validation and transformation rules.
-		
-		@param   mixed $params  The rules that govern how the filter transforms values.
-		@throws  Exception      When the given rules are incomplete, contradictory, or otherwise invalid.
-	**/
-	public function __construct($params);
-	
-	
-	/**
 		Applies the filter's transformation rules to a value.
 		
 		@param   mixed $value  The original value.
