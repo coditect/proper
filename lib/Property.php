@@ -147,8 +147,7 @@ class Property
 			{
 				if ($error = $action->apply($value))
 				{
-					//throw new ValidationException($this, $action, $error);
-					echo $error;
+					throw new ValidationException($this, $action, $error);
 				}
 			}
 			else
