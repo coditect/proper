@@ -101,7 +101,7 @@ implements Loader
 	**/
 	protected static function parseWritability($docComment)
 	{
-		return preg_match(static:WRITABLITY_PATTERN, $docComment) === 1;
+		return preg_match(static::WRITABLITY_PATTERN, $docComment) === 1;
 	}
 	
 	
