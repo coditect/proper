@@ -31,7 +31,7 @@ class Demo
 		Delta only accepts string inputs.
 		
 		@readable and @writable
-		@filter Type {"allow": "string"}
+		@constraint Type: string
 	**/
 	protected $delta;
 	
@@ -39,7 +39,7 @@ class Demo
 		Epsilon casts any input to an integer.
 		
 		@readable and @writable
-		@filter Type {"force": "integer"}
+		@filter Integer
 	**/
 	protected $epsilon;
 	
@@ -47,7 +47,8 @@ class Demo
 		Zeta accepts any numeric input and casts it to a float.
 		
 		@readable and @writable
-		@filter Type {"allow": "numeric", "force": "float"}
+		@constraint Type: numeric
+		@filter Float
 	**/
 	protected $zeta;
 	
@@ -55,7 +56,8 @@ class Demo
 		Eta accepts both integers and booleans and casts to boolean.
 		
 		@readable and @writable
-		@filter Type {"allow": ["boolean", "integer"], "force": "boolean"}
+		@constraint Type: boolean, integer
+		@filter Boolean
 	**/
 	protected $eta;
 	
@@ -63,8 +65,8 @@ class Demo
 		Theta only accepts strings that start with "th".
 		
 		@readable and @writable
-		@filter Type {"allow": "string"}
-		@filter Regex "/^th/i"
+		@filter String
+		@constraint Regex:  /^th/i
 	**/
 	protected $theta;
 	
@@ -72,7 +74,7 @@ class Demo
 		Iota only accepts DateTime objects.
 		
 		@readable and @writable
-		@filter Instance {"class": "DateTime"}
+		@constraint Instance: DateTime or null
 	**/
 	protected $iota;
 	
@@ -81,17 +83,17 @@ class Demo
 		Kappa only accepts numbers in the range (0, 1].
 		
 		@readable and @writable
-		@filter Type {"allow": "numeric", "force": "float"}
-		@filter Range {">": 0, "<=": 1}
+		@constraint Type: real
+		@constraint Range: 0 < n <= 1
 	**/
 	protected $kappa;
 	
 	/**
-		Lambda only accepts numbers in the range (0, 1].
+		Lambda only accepts strings with a length between 5 and 7 characters
 		
 		@readable and @writable
-		@filter Type {"allow": "string"}
-		@filter Length {"min": 5, "max": 7}
+		@constraint Type: string
+		@constraint Length: 5 <= n <= 7
 	**/
 	protected $lambda;
 	
