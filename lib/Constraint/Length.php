@@ -20,11 +20,13 @@ extends Range
 	{
 		if (is_array($value) || (is_object($value) && $value instanceof \Countable))
 		{
-			return parent::apply(count($value));
+			$length = count($value);
 		}
 		else
 		{
-			return parent::apply(mb_strlen((string) $value));
+			$length = mb_strlen((string) $value);
 		}
+		
+		return str_replace('value', 'length', parent::apply($length));
 	}
 }
