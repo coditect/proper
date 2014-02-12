@@ -2,9 +2,10 @@
 
 
 /**
-	A Filter transforms values according to as set of predefined rules.
+	A Filter transforms values into a form appropriate for assignment to a property.
 **/
 interface Filter
+extends Action
 {
 	/**
 		Applies the filter's transformation rules to a value.
