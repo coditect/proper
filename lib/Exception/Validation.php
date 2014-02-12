@@ -1,18 +1,18 @@
 <?php namespace Proper\Exception;
 
 use \Exception;
-use \Proper\Filter;
+use \Proper\Constraint;
 use \Proper\Property;
 
 
 class Validation
 extends \Proper\Exception
 {
-	public function __construct(Property $property, Filter $filter, Exception $previous)
+	public function __construct(Property $property, Constraint $constraint, $message)
 	{
-		$filterName = get_class($filter);
+		$constraintName = get_class($constraint);
 		$propertyName = $property->getName();
-		$message = "Invalid input for filter $filterName of $propertyName";
-		parent::__construct($property, $filter, $message, $previous);
+		$message = "Invalid input for $propertyName: $message ($constraintName)";
+		parent::__construct($property, $constraint, $message);
 	}
 }
